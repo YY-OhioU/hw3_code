@@ -11,11 +11,11 @@ def gen_maze():
 
     m1[0, 8] = GOAL
     m1[5, 3] = START
-    m1[3, 0:8] = WALL
+    m1[3, 1:] = WALL
 
     m2[0, 8] = GOAL
     m2[5, 3] = START
-    m2[3, 1:9] = WALL
+    m2[3, 0:8] = WALL
     return m1, m2
 
 

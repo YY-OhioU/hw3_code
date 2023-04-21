@@ -3,14 +3,14 @@ import random
 import numpy as np
 from matplotlib import pyplot as plt
 from environment import Maze
-from agents import DynaQ, DynaQP
+from agents import DynaQ, DynaQP, CustomDynaQP
 
 from settings import *
 
 
 def run_tests(agent_cls, *args, **kwargs):
-    # np.random.seed(1)
-    # random.seed(10)
+    np.random.seed(101)
+    random.seed(101)
 
     maze = Maze()
     action_space = tuple([x for x in range(maze.actions.shape[0])])
@@ -42,17 +42,24 @@ def run_tests(agent_cls, *args, **kwargs):
 
 if __name__ == '__main__':
     X = [x for x in range(MAX_TIMESTEP)]
-    #
+
     print("Dyna-Q =======================")
     dyna_q_reward_hist = run_tests(DynaQ)
     dyna_q_reward_average = np.average(dyna_q_reward_hist, axis=0)
     fig, ax = plt.subplots()
-    plt.plot(X, dyna_q_reward_average, label='Dyna-Q')
+    plt.plot(X, dyna_q_reward_average, label='Dyna-Q', color='red')
 
     print("Dyna-Q+ =======================")
     dyna_qp_reward_hist = run_tests(DynaQP)
     dyna_qp_reward_average = np.average(dyna_qp_reward_hist, axis=0)
-    plt.plot(X, dyna_qp_reward_average, label='Dyna-Q+')
+    plt.plot(X, dyna_qp_reward_average, label='Dyna-Q+', color='blue')
+
+    print("Custom_Dyna-Q+ =======================")
+    dyna_cqp_reward_hist = run_tests(CustomDynaQP)
+    dyna_cqp_reward_average = np.average(dyna_cqp_reward_hist, axis=0)
+    plt.plot(X, dyna_cqp_reward_average, label='custom_Dyna-Q+', color='m')
+
+    plt.axvline(x=SWITCH_TIMESTEP-1, linestyle='--', color='grey', alpha=0.4)
 
     plt.legend()
     plt.show()

@@ -9,15 +9,16 @@ class DynaQ:
     def __init__(self,
                  action_space=(0, 1, 2, 3),
                  state_shape=(6, 9),
-                 epsilon_final=0.01,
-                 epsilon_start=0.5,
-                 alpha=0.5,
+                 epsilon_final=0.1,
+                 epsilon_start=0.1,
+                 alpha=0.1,
                  gamma=0.95,
                  n=50,
-                 k=1e-8,
+                 k=1e-4,
                  ):
 
         self.action_space = action_space
+        self.action_space_size = len(action_space)
         self.epsilon = epsilon_start
         self.epsilon_start = epsilon_start
         self.epsilon_final = epsilon_final
@@ -34,9 +35,7 @@ class DynaQ:
         q_shape = list(state_shape)
         q_shape.append(len(action_space))
         self.q_table = np.zeros(q_shape, dtype='float')
-        self.history = set()
-        self.model = np.ndarray(q_shape, dtype=np.ndarray)
-        self.visit_history = np.zeros_like(self.q_table)
+        self.model = dict()
 
     def decay_esp(self):
         self.epsilon *= self.eps_decay_factor
@@ -63,50 +62,70 @@ class DynaQ:
         new_q = old_q + self.alpha*(reward + self.gamma*max_q_s_p - old_q)
         self.q_table[state[0], state[1], action] = new_q
 
-    def get_new_reward(self, reward, state, action):
+    def get_new_reward(self, reward, *args, **kwargs):
         return reward
 
     def step(self, state, state_p, reward, action):
         self.decay_esp()
         self.update_q(state, state_p, reward, action)
-        self.model[state[0], state[1], action] = [reward, state_p]
-        self.history.add((state[0], state[1], action))
-        self.visit_history[state[0], state[1], action] = self.timestep
-        # if self.history:
+        model_key = (state[0], state[1])
+
+        if model_key not in self.model.keys():
+            self.model[model_key] = dict()
+            for a in self.action_space:
+                if a != action:
+                    self.model[tuple(state)][a] = [tuple(state), 0, 0]
+
+        self.model[tuple(state)][action] = [tuple(state_p), reward, self.timestep]
 
         record_count = 0
         while record_count < self.n:
-            # record = exp
-            record = random.sample(self.history, 1)[0]
             record_count += 1
-            sample_state, sample_action = (record[0], record[1]), record[2]
-            sample_reward, sample_next_state = self.model[sample_state[0], sample_state[1], sample_action]
-            if (state[0], state[1], action) != record:
-                sample_reward = self.get_new_reward(sample_reward, sample_state, sample_action)
+            sample_state = random.sample(list(self.model), 1)[0]
+            if sample_state == model_key:
+                continue
+            sample_action = random.sample(list(self.model[sample_state]), 1)[0]
+            sample_next_state, sample_reward, sample_time = self.model[sample_state][sample_action]
+            sample_reward = self.get_new_reward(sample_reward, sample_state, sample_action, sample_time)
             self.update_q(sample_state, sample_next_state, sample_reward, sample_action)
-            # self.visit_history[sample_state[0], sample_state[1], sample_action] = self.timestep
 
         self.timestep += 1
 
 
 class DynaQP(DynaQ):
 
-    def get_new_reward(self, reward, state, action):
-        last_t = self.visit_history[state[0], state[1], action]
-        bonus_reward = reward + self.k * sqrt(self.timestep - last_t)
+    def get_new_reward(self, reward, state, action, last_time):
+        bonus_reward = reward + self.k * sqrt(self.timestep - last_time)
         return bonus_reward
 
 
 class CustomDynaQP(DynaQP):
-    def __init__(self, *args, **kwargs):
-        super(CustomDynaQP, self).__init__(*args, **kwargs)
-        self.visit_history = np.zeros_like(self.q_table)
 
     def act(self, state):
-        action = super().act(state)
-        self.visit_history[state[0], state[1], action] = -1
-        self.visit_history += 1
-        return action
+
+        q_list = self.q_table[state[0], state[1]]
+        model_key = (state[0], state[1])
+        last_visit = self.model.get(model_key, None)
+
+        top = float("-inf")
+        ties = []
+
+        for aid in range(self.action_space_size):
+            if not last_visit:
+                bonus = 0
+            else:
+                last_time = last_visit.get(aid, [0])[-1]
+                bonus = self.k * sqrt(self.timestep - last_time)
+            new_q = q_list[aid] + bonus
+
+            if new_q > top:
+                top = new_q
+                ties = []
+
+            if new_q == top:
+                ties.append(aid)
+
+        return np.random.choice(ties)
 
 # class DynaQQ
 
@@ -122,6 +141,6 @@ if __name__ == '__main__':
 
     x = np.arange(MAX_TIMESTEP)
     plt.figure()
-    plt.plot(x,eps_list)
+    plt.plot(x, eps_list)
     plt.show()
 
