@@ -25,7 +25,7 @@ def run_tests(agent_cls, *args, **kwargs):
         for step in range(MAX_TIMESTEP):
             action = agent.act(state)
             reward, new_state, terminate = maze.step(state, action)
-            if step == SWITCH_TIMESTEP -1:
+            if step == SWITCH_TIMESTEP -1 and MAP_CHANGE:
                 print(f"[Epoch {epoch}] before-switch {hit_count}")
             agent.step(state, new_state, reward, action)
             state = new_state
@@ -59,7 +59,8 @@ if __name__ == '__main__':
     dyna_cqp_reward_average = np.average(dyna_cqp_reward_hist, axis=0)
     plt.plot(X, dyna_cqp_reward_average, label='custom_Dyna-Q+', color='m')
 
-    plt.axvline(x=SWITCH_TIMESTEP-1, linestyle='--', color='grey', alpha=0.4)
+    if MAP_CHANGE:
+        plt.axvline(x=SWITCH_TIMESTEP-1, linestyle='--', color='grey', alpha=0.4)
 
     plt.legend()
     plt.show()

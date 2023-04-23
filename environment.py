@@ -40,7 +40,7 @@ class Maze:
         return pos
 
     def step(self, state, action):
-        if self.stepcount == SWITCH_TIMESTEP-1:
+        if self.stepcount == SWITCH_TIMESTEP-1 and MAP_CHANGE:
             self.cur_maze = self.maze_2
             self.cur_start = self.find_value(START)[0]
 
